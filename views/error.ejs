@@ -1,0 +1,9 @@
+<%- include('partials/header', { title: 'Error' }) %>
+
+<div class="error-container">
+  <h1 class="error-code">Error</h1>
+  <p class="error-message"><%= typeof error !== 'undefined' ? error : 'Something went wrong' %></p>
+  <a href="/" class="btn btn-primary">Return to Base</a>
+</div>
+
+<%- include('partials/footer') %>

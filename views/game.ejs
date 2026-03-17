@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galaxia - Play</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/game.css">
+</head>
+<body class="game-body">
+  <div class="game-wrapper">
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- HUD Overlay -->
+    <div class="game-hud">
+      <div class="hud-left">
+        <div class="hud-item">
+          <span class="hud-label">SCORE</span>
+          <span class="hud-value" id="hudScore">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">WAVE</span>
+          <span class="hud-value" id="hudWave">1</span>
+        </div>
+      </div>
+      <div class="hud-center">
+        <span class="player-name"><%= user.username %></span>
+      </div>
+      <div class="hud-right">
+        <div class="hud-item">
+          <span class="hud-label">HIGH SCORE</span>
+          <span class="hud-value" id="hudHighScore"><%= highScore %></span>
+        </div>
+        <div class="hud-item lives-container">
+          <span class="hud-label">LIVES</span>
+          <span class="hud-value lives" id="hudLives">
+            <span class="life">&#9829;</span>
+            <span class="life">&#9829;</span>
+            <span class="life">&#9829;</span>
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Start Screen -->
+    <div class="game-overlay" id="startScreen">
+      <div class="overlay-content">
+        <h1 class="overlay-title">GALAXIA</h1>
+        <p class="overlay-subtitle">Defend the Galaxy</p>
+        <div class="controls-info">
+          <div class="control"><kbd>&#8592;</kbd><kbd>&#8594;</kbd> or <kbd>A</kbd><kbd>D</kbd> Move</div>
+          <div class="control"><kbd>SPACE</kbd> or <kbd>CLICK</kbd> Shoot</div>
+          <div class="control"><kbd>P</kbd> Pause</div>
+        </div>
+        <button class="btn btn-primary btn-lg" id="startBtn">START GAME</button>
+        <a href="/" class="btn btn-secondary">Back to Home</a>
+      </div>
+    </div>
+    
+    <!-- Pause Screen -->
+    <div class="game-overlay hidden" id="pauseScreen">
+      <div class="overlay-content">
+        <h1 class="overlay-title">PAUSED</h1>
+        <button class="btn btn-primary btn-lg" id="resumeBtn">RESUME</button>
+        <a href="/" class="btn btn-secondary">Quit Game</a>
+      </div>
+    </div>
+    
+    <!-- Game Over Screen -->
+    <div class="game-overlay hidden" id="gameOverScreen">
+      <div class="overlay-content">
+        <h1 class="overlay-title game-over-title">GAME OVER</h1>
+        <div class="final-stats">
+          <div class="stat">
+            <span class="stat-label">Final Score</span>
+            <span class="stat-value" id="finalScore">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Wave Reached</span>
+            <span class="stat-value" id="finalWave">1</span>
+          </div>
+          <div class="stat new-high" id="newHighScore" style="display: none;">
+            <span class="stat-label">NEW HIGH SCORE!</span>
+          </div>
+        </div>
+        <div class="game-over-actions">
+          <button class="btn btn-primary btn-lg" id="playAgainBtn">PLAY AGAIN</button>
+          <a href="/scoreboard" class="btn btn-secondary">View Scoreboard</a>
+          <a href="/" class="btn btn-secondary">Home</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Wave Announcement -->
+    <div class="wave-announce hidden" id="waveAnnounce">
+      <span class="wave-text">WAVE <span id="waveNumber">1</span></span>
+    </div>
+    
+    <!-- Power-up Notification -->
+    <div class="powerup-notify hidden" id="powerupNotify">
+      <span class="powerup-text" id="powerupText">SHIELD ACTIVATED</span>
+    </div>
+  </div>
+  
+  <script src="/js/game.js"></script>
+</body>
+</html>

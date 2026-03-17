@@ -1,0 +1,79 @@
+<%- include('partials/header', { title: 'Scoreboard' }) %>
+
+<div class="scoreboard-container">
+  <h1 class="page-title">Global Leaderboard</h1>
+  <p class="page-subtitle">Top pilots in the galaxy</p>
+  
+  <div class="scoreboard-card">
+    <% if (scores.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-icon">&#9733;</div>
+        <p>No scores yet. Be the first to defend the galaxy!</p>
+        <% if (!user) { %>
+          <a href="/signup" class="btn btn-primary">Start Playing</a>
+        <% } else { %>
+          <a href="/game" class="btn btn-primary">Play Now</a>
+        <% } %>
+      </div>
+    <% } else { %>
+      <table class="scoreboard-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Pilot</th>
+            <th>Score</th>
+            <th>Wave</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% scores.forEach((score, index) => { %>
+            <tr class="<%= user && score.userId === user.id ? 'highlight' : '' %> <%= index < 3 ? 'top-' + (index + 1) : '' %>">
+              <td class="rank">
+                <% if (index === 0) { %>
+                  <span class="medal gold">1</span>
+                <% } else if (index === 1) { %>
+                  <span class="medal silver">2</span>
+                <% } else if (index === 2) { %>
+                  <span class="medal bronze">3</span>
+                <% } else { %>
+                  <%= index + 1 %>
+                <% } %>
+              </td>
+              <td class="username"><%= score.username %></td>
+              <td class="score"><%= score.score.toLocaleString() %></td>
+              <td class="wave">Wave <%= score.wave %></td>
+              <td class="date"><%= new Date(score.createdAt).toLocaleDateString() %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+  
+  <% if (user && userScores.length > 0) { %>
+    <div class="user-scores">
+      <h2 class="section-title">Your Best Scores</h2>
+      <div class="user-scores-grid">
+        <% userScores.slice(0, 5).forEach((score, index) => { %>
+          <div class="user-score-card">
+            <span class="user-rank">#<%= index + 1 %></span>
+            <span class="user-score-value"><%= score.score.toLocaleString() %></span>
+            <span class="user-wave">Wave <%= score.wave %></span>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+  <% } %>
+  
+  <div class="scoreboard-actions">
+    <% if (user) { %>
+      <a href="/game" class="btn btn-primary">Play Again</a>
+    <% } else { %>
+      <a href="/signup" class="btn btn-primary">Join the Battle</a>
+    <% } %>
+    <a href="/" class="btn btn-secondary">Home</a>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

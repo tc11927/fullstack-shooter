@@ -1,0 +1,56 @@
+<%- include('partials/header') %>
+
+<div class="hero">
+  <div class="stars"></div>
+  <div class="hero-content">
+    <h1 class="hero-title">
+      <span class="title-line">DEFEND THE</span>
+      <span class="title-galaxy">GALAXY</span>
+    </h1>
+    <p class="hero-subtitle">Battle waves of alien invaders in this classic arcade shooter</p>
+    <div class="hero-actions">
+      <% if (user) { %>
+        <a href="/game" class="btn btn-primary btn-lg">
+          <span class="btn-icon">&#9658;</span>
+          Start Game
+        </a>
+      <% } else { %>
+        <a href="/signup" class="btn btn-primary btn-lg">
+          <span class="btn-icon">&#9658;</span>
+          Play Now
+        </a>
+        <a href="/login" class="btn btn-secondary btn-lg">Login</a>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<section class="features">
+  <div class="container">
+    <h2 class="section-title">How to Play</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&#8592;&#8594;</div>
+        <h3>Move</h3>
+        <p>Use Arrow Keys or WASD to move your ship</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9679;</div>
+        <h3>Shoot</h3>
+        <p>Press Space or Click to fire at enemies</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9733;</div>
+        <h3>Power-Ups</h3>
+        <p>Collect power-ups for shields, speed, and more</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9775;</div>
+        <h3>Survive</h3>
+        <p>Clear waves and climb the leaderboard</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
