@@ -6,19 +6,27 @@ const { getTopScores, addScore, getUserScores } = require("../utils/storage");
 const router = express.Router();
 
 // GET /scoreboard - Show scoreboard page
-router.get("/scoreboard", async (req, res) => {
-    const scores = await getTopScores(10);
-    const userScores = req.session.user
-        ? await getUserScores(req.session.user.id)
-        : [];
-    res.render("scoreboard", { scores, userScores });
+router.get("/scoreboard", async (req, res, next) => {
+    try {
+        const scores = await getTopScores(10);
+        const userScores = req.session.user
+            ? await getUserScores(req.session.user.id)
+            : [];
+        res.render("scoreboard", { scores, userScores });
+    } catch (err) {
+        next(err);
+    }
 });
 
 // GET /api/scores - Get top scores (JSON)
-router.get("/api/scores", async (req, res) => {
-    const limit = parseInt(req.query.limit) || 10;
-    const scores = await getTopScores(limit);
-    res.json(scores);
+router.get("/api/scores", async (req, res, next) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+        const scores = await getTopScores(limit);
+        res.json(scores);
+    } catch (err) {
+        next(err);
+    }
 });
 
 // POST /api/scores - Submit new score (requires auth)
@@ -58,9 +66,13 @@ router.post("/api/scores", requireAuth, async (req, res) => {
 });
 
 // GET /api/scores/user - Get current user's scores
-router.get("/api/scores/user", requireAuth, async (req, res) => {
-    const scores = await getUserScores(req.session.user.id);
-    res.json(scores);
+router.get("/api/scores/user", requireAuth, async (req, res, next) => {
+    try {
+        const scores = await getUserScores(req.session.user.id);
+        res.json(scores);
+    } catch (err) {
+        next(err);
+    }
 });
 
 module.exports = router;

@@ -8,6 +8,7 @@
         "db:init": "psql \"$DATABASE_URL\" -f scripts/init-db.sql"
     },
     "dependencies": {
+        "@supabase/supabase-js": "^2.99.2",
         "bcryptjs": "^2.4.3",
         "dotenv": "^17.3.1",
         "ejs": "^3.1.10",

@@ -4,8 +4,6 @@ const path = require("path");
 
 require("dotenv").config();
 
-const { pool } = require("./db");
-
 const authRoutes = require("./routes/auth");
 const gameRoutes = require("./routes/game");
 const scoresRoutes = require("./routes/scores");
@@ -60,24 +58,20 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).render("error", { error: err.message });
+    console.error(err);
+    const message =
+        err && typeof err.message === "string"
+            ? err.message
+            : "An unexpected error occurred.";
+    res.status(500).render("error", { error: message });
+});
+
+// Log any unhandled promise rejections to help debugging
+process.on("unhandledRejection", (reason) => {
+    console.error("Unhandled promise rejection:", reason);
 });
 
 async function start() {
-    // Fail fast with a helpful message if Postgres is not configured/running.
-    try {
-        await pool.query("select 1");
-    } catch (err) {
-        console.error("PostgreSQL connection failed.");
-        console.error(
-            "Set DATABASE_URL in your .env (see .env.example) and run: npm run db:init"
-        );
-        console.error("Then start Postgres and re-run: npm run dev");
-        console.error(err?.message || err);
-        process.exit(1);
-    }
-
     app.listen(PORT, () => {
         console.log(`Galaxia server running on http://localhost:${PORT}`);
     });

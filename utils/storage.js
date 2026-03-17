@@ -1,4 +1,4 @@
-const { pool } = require("../db");
+const { supabase } = require("../supabaseClient");
 
 function mapUserRow(r) {
     return {
@@ -21,93 +21,107 @@ function mapScoreRow(r) {
 }
 
 // -----------------------------
-// User operations (PostgreSQL)
+// User operations (Supabase)
 // -----------------------------
 async function getUserById(id) {
-    const { rows } = await pool.query(
-        `select id, username, password_hash, created_at
-         from users
-         where id = $1
-         limit 1`,
-        [id]
-    );
-    return rows[0] ? mapUserRow(rows[0]) : null;
+    const { data, error } = await supabase
+        .from("users")
+        .select("id, username, password_hash, created_at")
+        .eq("id", id)
+        .limit(1)
+        .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapUserRow(data) : null;
 }
 
 async function getUserByUsername(username) {
-    const { rows } = await pool.query(
-        `select id, username, password_hash, created_at
-         from users
-         where lower(username) = lower($1)
-         limit 1`,
-        [username]
-    );
-    return rows[0] ? mapUserRow(rows[0]) : null;
+    const { data, error } = await supabase
+        .from("users")
+        .select("id, username, password_hash, created_at")
+        .ilike("username", username)
+        .limit(1)
+        .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapUserRow(data) : null;
 }
 
 async function createUser(user) {
-    const { rows } = await pool.query(
-        `insert into users (id, username, password_hash, created_at)
-         values ($1, $2, $3, $4)
-         returning id, username, password_hash, created_at`,
-        [user.id, user.username, user.passwordHash, user.createdAt]
-    );
-    return rows[0] ? mapUserRow(rows[0]) : null;
+    const { data, error } = await supabase
+        .from("users")
+        .insert({
+            id: user.id,
+            username: user.username,
+            password_hash: user.passwordHash,
+            created_at: user.createdAt,
+        })
+        .select("id, username, password_hash, created_at")
+        .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapUserRow(data) : null;
 }
 
 // -----------------------------
-// Score operations (PostgreSQL)
+// Score operations (Supabase)
 // -----------------------------
 async function addScore(score) {
-    const { rows } = await pool.query(
-        `insert into scores (id, user_id, username, score, wave, created_at)
-         values ($1, $2, $3, $4, $5, $6)
-         returning id, user_id, username, score, wave, created_at`,
-        [
-            score.id,
-            score.userId,
-            score.username,
-            score.score,
-            score.wave,
-            score.createdAt,
-        ]
-    );
-    return rows[0] ? mapScoreRow(rows[0]) : null;
+    const { data, error } = await supabase
+        .from("scores")
+        .insert({
+            id: score.id,
+            user_id: score.userId,
+            username: score.username,
+            score: score.score,
+            wave: score.wave,
+            created_at: score.createdAt,
+        })
+        .select("id, user_id, username, score, wave, created_at")
+        .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapScoreRow(data) : null;
 }
 
 async function getTopScores(limit = 10) {
     const lim = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 10;
-    const { rows } = await pool.query(
-        `select id, user_id, username, score, wave, created_at
-         from scores
-         order by score desc, created_at asc
-         limit $1`,
-        [lim]
-    );
-    return rows.map(mapScoreRow);
+
+    const { data, error } = await supabase
+        .from("scores")
+        .select("id, user_id, username, score, wave, created_at")
+        .order("score", { ascending: false })
+        .order("created_at", { ascending: true })
+        .limit(lim);
+
+    if (error) throw error;
+    return data.map(mapScoreRow);
 }
 
 async function getUserScores(userId) {
-    const { rows } = await pool.query(
-        `select id, user_id, username, score, wave, created_at
-         from scores
-         where user_id = $1
-         order by score desc, created_at asc`,
-        [userId]
-    );
-    return rows.map(mapScoreRow);
+    const { data, error } = await supabase
+        .from("scores")
+        .select("id, user_id, username, score, wave, created_at")
+        .eq("user_id", userId)
+        .order("score", { ascending: false })
+        .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    return data.map(mapScoreRow);
 }
 
 async function getUserHighScore(userId) {
-    const { rows } = await pool.query(
-        `select score
-         from scores
-         where user_id = $1
-         order by score desc, created_at asc
-         limit 1`,
-        [userId]
-    );
-    return rows[0] ? rows[0].score : 0;
+    const { data, error } = await supabase
+        .from("scores")
+        .select("score")
+        .eq("user_id", userId)
+        .order("score", { ascending: false })
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) throw error;
+    return data ? data.score : 0;
 }
 
 module.exports = {
