@@ -16,5 +16,11 @@
     "username": "helpme",
     "passwordHash": "$2a$10$NvQbitdvb5AJshGz/l1kie7OZauP39q8sGFdPnDIa2na/9gBXGdeW",
     "createdAt": "2026-03-17T02:45:47.257Z"
+  },
+  {
+    "id": "74543d98-4d71-4201-b69e-44abcea5ce17",
+    "username": "ppcaca",
+    "passwordHash": "$2a$10$.IvszqQmx23y94UBqJFlVuE/u064J2TS3eXBmbyqC1mEULgLaIifG",
+    "createdAt": "2026-03-17T17:25:00.836Z"
   }
 ]

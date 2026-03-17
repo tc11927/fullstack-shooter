@@ -1,109 +1,121 @@
-const fs = require('fs');
-const path = require('path');
+const { pool } = require("../db");
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+function mapUserRow(r) {
+    return {
+        id: r.id,
+        username: r.username,
+        passwordHash: r.password_hash,
+        createdAt: r.created_at,
+    };
 }
 
-function getFilePath(filename) {
-  return path.join(DATA_DIR, filename);
+function mapScoreRow(r) {
+    return {
+        id: r.id,
+        userId: r.user_id,
+        username: r.username,
+        score: r.score,
+        wave: r.wave,
+        createdAt: r.created_at,
+    };
 }
 
-function readJSON(filename) {
-  const filePath = getFilePath(filename);
-  
-  if (!fs.existsSync(filePath)) {
-    // Initialize with empty array if file doesn't exist
-    writeJSON(filename, []);
-    return [];
-  }
-  
-  try {
-    const data = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error(`Error reading ${filename}:`, error);
-    return [];
-  }
+// -----------------------------
+// User operations (PostgreSQL)
+// -----------------------------
+async function getUserById(id) {
+    const { rows } = await pool.query(
+        `select id, username, password_hash, created_at
+         from users
+         where id = $1
+         limit 1`,
+        [id]
+    );
+    return rows[0] ? mapUserRow(rows[0]) : null;
 }
 
-function writeJSON(filename, data) {
-  const filePath = getFilePath(filename);
-  
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-    return true;
-  } catch (error) {
-    console.error(`Error writing ${filename}:`, error);
-    return false;
-  }
+async function getUserByUsername(username) {
+    const { rows } = await pool.query(
+        `select id, username, password_hash, created_at
+         from users
+         where lower(username) = lower($1)
+         limit 1`,
+        [username]
+    );
+    return rows[0] ? mapUserRow(rows[0]) : null;
 }
 
-// User operations
-function getUsers() {
-  return readJSON('users.json');
+async function createUser(user) {
+    const { rows } = await pool.query(
+        `insert into users (id, username, password_hash, created_at)
+         values ($1, $2, $3, $4)
+         returning id, username, password_hash, created_at`,
+        [user.id, user.username, user.passwordHash, user.createdAt]
+    );
+    return rows[0] ? mapUserRow(rows[0]) : null;
 }
 
-function getUserById(id) {
-  const users = getUsers();
-  return users.find(u => u.id === id);
+// -----------------------------
+// Score operations (PostgreSQL)
+// -----------------------------
+async function addScore(score) {
+    const { rows } = await pool.query(
+        `insert into scores (id, user_id, username, score, wave, created_at)
+         values ($1, $2, $3, $4, $5, $6)
+         returning id, user_id, username, score, wave, created_at`,
+        [
+            score.id,
+            score.userId,
+            score.username,
+            score.score,
+            score.wave,
+            score.createdAt,
+        ]
+    );
+    return rows[0] ? mapScoreRow(rows[0]) : null;
 }
 
-function getUserByUsername(username) {
-  const users = getUsers();
-  return users.find(u => u.username.toLowerCase() === username.toLowerCase());
+async function getTopScores(limit = 10) {
+    const lim = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 10;
+    const { rows } = await pool.query(
+        `select id, user_id, username, score, wave, created_at
+         from scores
+         order by score desc, created_at asc
+         limit $1`,
+        [lim]
+    );
+    return rows.map(mapScoreRow);
 }
 
-function createUser(user) {
-  const users = getUsers();
-  users.push(user);
-  return writeJSON('users.json', users);
+async function getUserScores(userId) {
+    const { rows } = await pool.query(
+        `select id, user_id, username, score, wave, created_at
+         from scores
+         where user_id = $1
+         order by score desc, created_at asc`,
+        [userId]
+    );
+    return rows.map(mapScoreRow);
 }
 
-// Score operations
-function getScores() {
-  return readJSON('scores.json');
-}
-
-function getTopScores(limit = 10) {
-  const scores = getScores();
-  return scores
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
-}
-
-function addScore(score) {
-  const scores = getScores();
-  scores.push(score);
-  writeJSON('scores.json', scores);
-  return score;
-}
-
-function getUserScores(userId) {
-  const scores = getScores();
-  return scores
-    .filter(s => s.userId === userId)
-    .sort((a, b) => b.score - a.score);
-}
-
-function getUserHighScore(userId) {
-  const userScores = getUserScores(userId);
-  return userScores.length > 0 ? userScores[0].score : 0;
+async function getUserHighScore(userId) {
+    const { rows } = await pool.query(
+        `select score
+         from scores
+         where user_id = $1
+         order by score desc, created_at asc
+         limit 1`,
+        [userId]
+    );
+    return rows[0] ? rows[0].score : 0;
 }
 
 module.exports = {
-  readJSON,
-  writeJSON,
-  getUsers,
-  getUserById,
-  getUserByUsername,
-  createUser,
-  getScores,
-  getTopScores,
-  addScore,
-  getUserScores,
-  getUserHighScore
+    getUserById,
+    getUserByUsername,
+    createUser,
+    addScore,
+    getTopScores,
+    getUserScores,
+    getUserHighScore,
 };

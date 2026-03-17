@@ -1,8 +1,16 @@
 // Galaxia Game Engine
+// - Self-contained canvas game loop (update + draw via requestAnimationFrame)
+// - Maintains entity arrays (enemies, bullets, powerups, particles)
+// - Uses SVG assets for crisp sprites, drawn onto the canvas via drawImage()
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// SVG sprites (drawn to canvas as images)
+// -----------------------------
+// Assets (SVG sprites -> canvas)
+// -----------------------------
+// We render on a <canvas>, but ships/bullets/powerups are SVG files loaded into
+// Image objects and painted with ctx.drawImage(). If any asset fails to load,
+// drawing falls back to the original shape rendering so gameplay still works.
 const SPRITES = {
     ready: false,
     player: new Image(),
@@ -18,6 +26,8 @@ const SPRITES = {
 };
 
 function loadSprites() {
+    // Preload all sprites. We always resolve, even on error, to avoid blocking
+    // the game loop (errors will just use fallback rendering).
     const entries = [
         [SPRITES.player, "/assets/player.svg"],
         [SPRITES.enemyBasic, "/assets/enemy-basic.svg"],
@@ -49,7 +59,9 @@ function loadSprites() {
     });
 }
 
-// Game constants
+// -----------------------------
+// Constants (colors / styling)
+// -----------------------------
 const COLORS = {
     cyan: "#00ffff",
     magenta: "#ff00ff",
@@ -60,7 +72,9 @@ const COLORS = {
     white: "#ffffff",
 };
 
-// Game state
+// -----------------------------
+// Game state (high-level)
+// -----------------------------
 let gameState = "start"; // start, playing, paused, gameover
 let score = 0;
 let wave = 1;
@@ -68,7 +82,9 @@ let lives = 3;
 let highScore =
     parseInt(document.getElementById("hudHighScore").textContent) || 0;
 
-// Game objects
+// -----------------------------
+// Game objects (entities & effects)
+// -----------------------------
 let player = null;
 let enemies = [];
 let playerBullets = [];
@@ -77,31 +93,41 @@ let powerUps = [];
 let particles = [];
 let stars = [];
 
-// Input
+// -----------------------------
+// Input state
+// -----------------------------
+// keys maps KeyboardEvent.code -> boolean, so update() can query held keys.
 const keys = {};
 let mouseDown = false;
 
-// Timing
+// -----------------------------
+// Timing / frame bookkeeping
+// -----------------------------
 let lastTime = 0;
 let enemySpawnTimer = 0;
 let powerUpTimer = 0;
 let waveTimer = 0;
 let shootTimer = 0;
 
-// Wave config
+// -----------------------------
+// Wave bookkeeping
+// -----------------------------
 let enemiesRemaining = 0;
 let enemiesInWave = 0;
 let waveComplete = false;
 
-// Initialize canvas size
+// -----------------------------
+// Canvas sizing + starfield background
+// -----------------------------
 function resizeCanvas() {
+    // Fullscreen canvas; re-init stars so density matches new size.
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     initStars();
 }
 
-// Star background
 function initStars() {
+    // Pre-generate stars for a cheap animated background.
     stars = [];
     for (let i = 0; i < 150; i++) {
         stars.push({
@@ -114,9 +140,12 @@ function initStars() {
     }
 }
 
-// Player class
+// -----------------------------
+// Player entity
+// -----------------------------
 class Player {
     constructor() {
+        // width/height are used for collisions and for scaling the sprite.
         this.width = 50;
         this.height = 40;
         this.x = canvas.width / 2 - this.width / 2;
@@ -193,7 +222,8 @@ class Player {
             }
         }
 
-        // Invincibility blink
+        // Invincibility blink: after getting hit we toggle visibility to
+        // communicate "can't be hit again yet" to the player.
         if (this.invincible) {
             this.invincibleTimer -= deltaTime;
             this.blinkTimer += deltaTime;
@@ -209,13 +239,14 @@ class Player {
     }
 
     shoot() {
+        // Spawns a bullet from the ship's center; negative speed moves up.
         const bulletX = this.x + this.width / 2 - 3;
         const bulletY = this.y;
         playerBullets.push(
             new Bullet(bulletX, bulletY, -12, COLORS.cyan, true)
         );
 
-        // Create muzzle flash particles
+        // Muzzle flash particles are purely visual feedback.
         for (let i = 0; i < 5; i++) {
             particles.push(
                 new Particle(bulletX + 3, bulletY, COLORS.cyan, "small")
@@ -228,7 +259,7 @@ class Player {
 
         ctx.save();
 
-        // Shield effect
+        // Shield effect is cosmetic (collisions use the normal player rectangle).
         if (this.shieldActive) {
             ctx.beginPath();
             ctx.arc(
@@ -246,6 +277,7 @@ class Player {
             ctx.closePath();
         }
 
+        // Main rendering path: use the SVG sprite if it loaded successfully.
         if (
             SPRITES.ready &&
             SPRITES.player.complete &&
@@ -350,7 +382,9 @@ class Player {
     }
 }
 
-// Enemy class
+// -----------------------------
+// Enemy entity
+// -----------------------------
 class Enemy {
     constructor(x, y, type = "basic") {
         this.type = type;
@@ -359,6 +393,7 @@ class Enemy {
         this.x = x;
         this.y = y;
 
+        // Type controls speed/health/points and also changes hitbox size.
         switch (type) {
             case "fast":
                 this.speed = 3;
@@ -390,7 +425,8 @@ class Enemy {
     }
 
     update(deltaTime) {
-        // Horizontal movement
+        // Horizontal movement + wall bounce. On bounce we also move down to
+        // increase pressure over time.
         this.x += this.speed * this.direction;
 
         // Bounce off walls
@@ -399,7 +435,7 @@ class Enemy {
             this.y += 20;
         }
 
-        // Slight vertical drift
+        // Slight vertical drift adds unpredictable motion.
         this.moveTimer += deltaTime;
         if (this.moveTimer > 2000) {
             this.verticalMove = Math.random() * 0.5;
@@ -407,7 +443,7 @@ class Enemy {
         }
         this.y += this.verticalMove;
 
-        // Shooting
+        // Shooting: cooldown timer; only shoots while in the upper half.
         this.shootTimer -= deltaTime;
         if (this.shootTimer <= 0 && this.y < canvas.height / 2) {
             this.shoot();
@@ -416,6 +452,7 @@ class Enemy {
     }
 
     shoot() {
+        // Spawn a downward bullet from enemy center.
         const bulletX = this.x + this.width / 2 - 3;
         const bulletY = this.y + this.height;
         enemyBullets.push(new Bullet(bulletX, bulletY, 6, this.color, false));
@@ -423,6 +460,7 @@ class Enemy {
 
     draw() {
         ctx.save();
+        // Preferred rendering: SVG sprite based on enemy type.
         if (SPRITES.ready) {
             const img =
                 this.type === "fast"
@@ -496,7 +534,9 @@ class Enemy {
     }
 }
 
-// Bullet class
+// -----------------------------
+// Bullet entity
+// -----------------------------
 class Bullet {
     constructor(x, y, speed, color, isPlayer) {
         this.x = x;
@@ -509,10 +549,12 @@ class Bullet {
     }
 
     update() {
+        // Bullets only move vertically; sign of speed decides direction.
         this.y += this.speed;
     }
 
     draw() {
+        // Preferred rendering: SVG sprite + a subtle trail for motion feedback.
         ctx.save();
         const img = this.isPlayer ? SPRITES.bulletPlayer : SPRITES.bulletEnemy;
         if (SPRITES.ready && img.complete && img.naturalWidth) {
@@ -540,7 +582,7 @@ class Bullet {
             return;
         }
 
-        // Fallback: original shape rendering
+        // Fallback: original shape rendering if the sprite isn't available.
         ctx.fillStyle = this.color;
         ctx.shadowColor = this.color;
         ctx.shadowBlur = 10;
@@ -566,11 +608,14 @@ class Bullet {
     }
 
     isOffScreen() {
+        // Used to cleanup bullets when they leave the play area.
         return this.y < -20 || this.y > canvas.height + 20;
     }
 }
 
-// Power-up class
+// -----------------------------
+// Power-up entity
+// -----------------------------
 class PowerUp {
     constructor(x, y, type) {
         this.x = x;
@@ -581,6 +626,7 @@ class PowerUp {
         this.speed = 2;
         this.pulse = 0;
 
+        // Type determines tint color and a fallback symbol (if sprite fails).
         switch (type) {
             case "shield":
                 this.color = COLORS.blue;
@@ -749,8 +795,11 @@ class Particle {
     }
 }
 
-// Collision detection
+// -----------------------------
+// Collision detection (AABB)
+// -----------------------------
 function checkCollision(rect1, rect2) {
+    // Axis-aligned bounding-box overlap test using x/y/width/height.
     return (
         rect1.x < rect2.x + rect2.width &&
         rect1.x + rect1.width > rect2.x &&
@@ -759,8 +808,11 @@ function checkCollision(rect1, rect2) {
     );
 }
 
-// Spawn enemies for wave
+// -----------------------------
+// Spawning / waves
+// -----------------------------
 function spawnWave() {
+    // Spawns a wave by scheduling enemy creation over time (staggered by i*500).
     const baseCount = 5 + wave * 2;
     enemiesInWave = Math.min(baseCount, 20);
     enemiesRemaining = enemiesInWave;
@@ -785,8 +837,8 @@ function spawnWave() {
     showWaveAnnounce(wave);
 }
 
-// Spawn power-up
 function spawnPowerUp() {
+    // Randomly choose a power-up; allow "life" when player is struggling.
     const types = ["shield", "rapid", "speed"];
     if (lives < 3) types.push("life");
 
@@ -795,11 +847,14 @@ function spawnPowerUp() {
     powerUps.push(new PowerUp(x, -30, type));
 }
 
-// Update game
+// -----------------------------
+// Update step (simulation)
+// -----------------------------
 function update(deltaTime) {
+    // Only simulate when playing; paused/gameover freeze positions.
     if (gameState !== "playing") return;
 
-    // Update stars
+    // Background starfield scrolls down to imply forward motion.
     stars.forEach((star) => {
         star.y += star.speed;
         if (star.y > canvas.height) {
@@ -808,17 +863,14 @@ function update(deltaTime) {
         }
     });
 
-    // Update player
+    // Update entities.
     player.update(deltaTime);
 
-    // Update enemies
     enemies.forEach((enemy) => enemy.update(deltaTime));
 
-    // Update bullets
     playerBullets.forEach((bullet) => bullet.update());
     enemyBullets.forEach((bullet) => bullet.update());
 
-    // Update power-ups
     powerUps.forEach((powerUp) => powerUp.update(deltaTime));
 
     // Update particles
