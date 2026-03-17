@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///Users/tc.11927/Desktop/Year%202%20term%202/Frontend/shooter/app/page.tsx"],"sourcesContent":["import SpaceShooter from \"@/components/space-shooter\"\n\nexport default function Home() {\n  return <SpaceShooter />\n}\n"],"names":[],"mappings":";;;;;;;;;;;;AAEe,SAAS;IACtB,qBAAO,8OAAC;;;;;AACV"}}]
-}

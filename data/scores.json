@@ -6,5 +6,29 @@
     "score": 1500,
     "wave": 2,
     "createdAt": "2026-03-17T01:21:54.744Z"
+  },
+  {
+    "id": "07bc41e5-7321-4a80-94d0-0507210a409c",
+    "userId": "913070d0-4dd7-4ffe-8230-6af94a467a98",
+    "username": "SophiaAngie",
+    "score": 6100,
+    "wave": 4,
+    "createdAt": "2026-03-17T02:40:50.394Z"
+  },
+  {
+    "id": "87af40f1-02f5-412d-a463-213a06181699",
+    "userId": "6cfe2990-61b3-4317-a513-81fcb554b8f5",
+    "username": "helpme",
+    "score": 300,
+    "wave": 1,
+    "createdAt": "2026-03-17T02:46:02.994Z"
+  },
+  {
+    "id": "5506dea2-5686-44b6-b36d-08741172844a",
+    "userId": "6cfe2990-61b3-4317-a513-81fcb554b8f5",
+    "username": "helpme",
+    "score": 500,
+    "wave": 1,
+    "createdAt": "2026-03-17T02:50:57.031Z"
   }
 ]
