@@ -25,7 +25,7 @@ app.use(
     session({
         secret:
             process.env.SESSION_SECRET ||
-            "galaxia-secret-key-change-in-production",
+            "robotron-secret-key-change-in-production",
         resave: false,
         saveUninitialized: false,
         cookie: {
@@ -73,7 +73,7 @@ process.on("unhandledRejection", (reason) => {
 
 async function start() {
     app.listen(PORT, () => {
-        console.log(`Galaxia server running on http://localhost:${PORT}`);
+        console.log(`Robotron server running on http://localhost:${PORT}`);
     });
 }
 

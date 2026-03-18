@@ -1,4 +1,4 @@
-// Galaxia Game Engine
+// Robotron Game Engine
 // - Self-contained canvas game loop (update + draw via requestAnimationFrame)
 // - Maintains entity arrays (enemies, bullets, powerups, particles)
 // - Uses SVG assets for crisp sprites, drawn onto the canvas via drawImage()
@@ -292,22 +292,6 @@ class Player {
                 this.width,
                 this.height
             );
-
-            // Engine glow kept as a dynamic effect
-            ctx.shadowColor = COLORS.yellow;
-            ctx.shadowBlur = 10;
-            ctx.fillStyle = COLORS.yellow;
-            ctx.beginPath();
-            ctx.ellipse(
-                this.x + this.width / 2,
-                this.y + this.height + 5,
-                8,
-                12 + Math.random() * 5,
-                0,
-                0,
-                Math.PI * 2
-            );
-            ctx.fill();
         } else {
             // Fallback: original shape rendering
             ctx.fillStyle = COLORS.cyan;
@@ -330,22 +314,6 @@ class Player {
             ctx.lineTo(this.x + 10, this.y + this.height - 5);
             ctx.lineTo(this.x + this.width - 10, this.y + this.height - 5);
             ctx.closePath();
-            ctx.fill();
-
-            // Engine glow
-            ctx.fillStyle = COLORS.yellow;
-            ctx.shadowColor = COLORS.yellow;
-            ctx.shadowBlur = 10;
-            ctx.beginPath();
-            ctx.ellipse(
-                this.x + this.width / 2,
-                this.y + this.height + 5,
-                8,
-                12 + Math.random() * 5,
-                0,
-                0,
-                Math.PI * 2
-            );
             ctx.fill();
         }
 
@@ -388,8 +356,9 @@ class Player {
 class Enemy {
     constructor(x, y, type = "basic") {
         this.type = type;
-        this.width = 40;
-        this.height = 35;
+        // Match player dimensions for consistent size
+        this.width = 50;
+        this.height = 40;
         this.x = x;
         this.y = y;
 
@@ -400,16 +369,12 @@ class Enemy {
                 this.health = 1;
                 this.points = 150;
                 this.color = COLORS.green;
-                this.width = 30;
-                this.height = 25;
                 break;
             case "tank":
                 this.speed = 1;
                 this.health = 3;
                 this.points = 200;
                 this.color = COLORS.red;
-                this.width = 50;
-                this.height = 45;
                 break;
             default: // basic
                 this.speed = 2;
@@ -472,7 +437,14 @@ class Enemy {
             if (img.complete && img.naturalWidth) {
                 ctx.shadowColor = this.color;
                 ctx.shadowBlur = 18;
-                ctx.drawImage(img, this.x, this.y, this.width, this.height);
+
+                // Draw without distortion: preserve sprite aspect ratio while
+                // keeping roughly the same height as the player/enemy logical size.
+                const targetHeight = this.height; // match logical enemy/player height
+                const aspect = img.naturalWidth / img.naturalHeight;
+                const targetWidth = targetHeight * aspect;
+
+                ctx.drawImage(img, this.x, this.y, targetWidth, targetHeight);
                 ctx.restore();
                 return;
             }

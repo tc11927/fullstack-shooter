@@ -1,4 +1,4 @@
-## Galaxia
+## Robotron
 
 Node.js + Express arcade shooter with EJS pages and a canvas game.
 
@@ -19,7 +19,7 @@ cp .env.example .env
 2. Create a database (example)
 
 ```bash
-createdb galaxia
+createdb robotron
 ```
 
 3. Set `DATABASE_URL` in `.env`, then initialize schema

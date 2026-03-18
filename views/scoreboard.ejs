@@ -2,13 +2,13 @@
 
 <div class="scoreboard-container">
   <h1 class="page-title">Global Leaderboard</h1>
-  <p class="page-subtitle">Top pilots in the galaxy</p>
+  <p class="page-subtitle">Top robots in the galaxy</p>
   
   <div class="scoreboard-card">
     <% if (scores.length === 0) { %>
       <div class="empty-state">
         <div class="empty-icon">&#9733;</div>
-        <p>No scores yet. Be the first to defend the galaxy!</p>
+        <p>No scores yet. Be the first to defeat the humans!</p>
         <% if (!user) { %>
           <a href="/signup" class="btn btn-primary">Start Playing</a>
         <% } else { %>
@@ -20,7 +20,7 @@
         <thead>
           <tr>
             <th>Rank</th>
-            <th>Pilot</th>
+            <th>Robot</th>
             <th>Score</th>
             <th>Wave</th>
             <th>Date</th>

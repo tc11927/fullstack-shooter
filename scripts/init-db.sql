@@ -1,4 +1,4 @@
--- Galaxia PostgreSQL schema
+-- Robotron PostgreSQL schema
 -- Run with:
 --   psql "$DATABASE_URL" -f scripts/init-db.sql
 
