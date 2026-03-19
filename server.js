@@ -15,8 +15,10 @@ const { pool } = require("./db");
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_URL);
+
 // Needed on Vercel (secure cookies behind a proxy)
-if (process.env.NODE_ENV === "production") {
+if (isVercel) {
     app.set("trust proxy", 1);
 }
 
@@ -55,9 +57,12 @@ app.use(
             "robotron-secret-key-change-in-production",
         resave: false,
         saveUninitialized: false,
-        proxy: isProd,
+        proxy: isVercel || isProd,
         cookie: {
-            secure: isProd,
+            // On Vercel, rely on X-Forwarded-Proto=https.
+            // If secure=true but Express doesn't think the request is secure,
+            // it will refuse to set the cookie (no Set-Cookie header).
+            secure: isVercel ? "auto" : isProd,
             sameSite: "lax",
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
         },
