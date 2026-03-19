@@ -6,15 +6,15 @@ const { Pool } = require("pg");
 // Or:
 //   PGHOST=localhost PGPORT=5432 PGDATABASE=robotron PGUSER=... PGPASSWORD=...
 
+// Cloud Postgres (Supabase, Neon, etc.) typically require SSL in production
+const useSsl =
+    process.env.NODE_ENV === "production" || process.env.PGSSLMODE === "require";
+
 const pool = new Pool(
     process.env.DATABASE_URL
         ? {
               connectionString: process.env.DATABASE_URL,
-              // Heroku-style providers often require SSL; local dev usually doesn't.
-              ssl:
-                  process.env.PGSSLMODE === "require"
-                      ? { rejectUnauthorized: false }
-                      : undefined,
+              ssl: useSsl ? { rejectUnauthorized: false } : undefined,
           }
         : undefined
 );

@@ -6,6 +6,19 @@ const { requireGuest } = require("../middleware/auth");
 
 const router = express.Router();
 
+function getAuthErrorMessage(error) {
+    const m = String(error?.message || "").toLowerCase();
+    if (m.includes("relation") && m.includes("does not exist"))
+        return "Database tables missing. Run scripts/supabase-init.sql in Supabase SQL Editor.";
+    if (m.includes("supabase") && m.includes("missing"))
+        return "Server misconfigured: Supabase env vars missing. Contact the site owner.";
+    if (m.includes("permission") || m.includes("policy"))
+        return "Database permission error. Check Supabase RLS policies.";
+    if (m.includes("duplicate") || m.includes("unique"))
+        return "Username already taken.";
+    return "An error occurred. Please try again.";
+}
+
 // GET /signup - Show signup form
 router.get("/signup", requireGuest, (req, res) => {
     res.render("signup", { error: null });
@@ -65,7 +78,8 @@ router.post("/signup", requireGuest, async (req, res) => {
         res.redirect("/game");
     } catch (error) {
         console.error("Signup error:", error);
-        res.render("signup", { error: "An error occurred. Please try again." });
+        const msg = getAuthErrorMessage(error);
+        res.render("signup", { error: msg });
     }
 });
 
@@ -116,7 +130,8 @@ router.post("/login", requireGuest, async (req, res) => {
         res.redirect("/game");
     } catch (error) {
         console.error("Login error:", error);
-        res.render("login", { error: "An error occurred. Please try again." });
+        const msg = getAuthErrorMessage(error);
+        res.render("login", { error: msg });
     }
 });
 

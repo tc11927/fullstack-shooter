@@ -16,13 +16,9 @@ Node.js + Express arcade shooter with EJS pages and a canvas game.
 cp .env.example .env
 ```
 
-2. Create a database (example)
+2. **Supabase** (users & scores): Create a project at [supabase.com](https://supabase.com), then run `scripts/supabase-init.sql` in the SQL Editor. Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to `.env`.
 
-```bash
-createdb robotron
-```
-
-3. Set `DATABASE_URL` in `.env`, then initialize schema
+3. **PostgreSQL** (sessions): Create a database, set `DATABASE_URL` in `.env`, then:
 
 ```bash
 npm run db:init

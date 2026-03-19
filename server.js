@@ -37,20 +37,26 @@ const isProd = process.env.NODE_ENV === "production";
 app.use(
     session({
         store: (() => {
-            // Vercel/serverless can't use MemoryStore for auth; persist sessions in Postgres.
+            // Vercel/serverless needs Postgres for sessions; MemoryStore won't persist across requests.
             if (!process.env.DATABASE_URL) {
-                // In local dev you might not need a DB-backed session store.
                 if (!isProd) return undefined;
-                throw new Error(
-                    "DATABASE_URL is required in production for session storage."
+                // Don't crash - use MemoryStore so app loads; login won't persist. Set DATABASE_URL to fix.
+                console.warn(
+                    "DATABASE_URL not set: sessions won't persist. Add DATABASE_URL in Vercel env vars."
                 );
+                return undefined;
             }
-            const PgSession = require("connect-pg-simple")(session);
-            return new PgSession({
-                pool,
-                tableName: "session",
-                createTableIfMissing: true,
-            });
+            try {
+                const PgSession = require("connect-pg-simple")(session);
+                return new PgSession({
+                    pool,
+                    tableName: "session",
+                    createTableIfMissing: true,
+                });
+            } catch (err) {
+                console.error("Session store init failed:", err);
+                return undefined;
+            }
         })(),
         secret:
             process.env.SESSION_SECRET ||
@@ -105,10 +111,11 @@ process.on("unhandledRejection", (reason) => {
     console.error("Unhandled promise rejection:", reason);
 });
 
-async function start() {
+// On Vercel: export the app for serverless. Locally: start the server.
+if (isVercel) {
+    module.exports = app;
+} else {
     app.listen(PORT, () => {
         console.log(`Robotron server running on http://localhost:${PORT}`);
     });
 }
-
-start();
