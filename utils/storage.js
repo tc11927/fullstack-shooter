@@ -9,6 +9,11 @@ function mapUserRow(r) {
     };
 }
 
+function escapeLikePattern(input) {
+    // Escape Postgres LIKE wildcards so usernames like "a_b" don't act as patterns.
+    return String(input).replace(/[%_\\\\]/g, "\\$&");
+}
+
 function mapScoreRow(r) {
     return {
         id: r.id,
@@ -38,10 +43,11 @@ async function getUserById(id) {
 
 async function getUserByUsername(username) {
     const supabase = getSupabase();
+    const normalized = escapeLikePattern(String(username).trim());
     const { data, error } = await supabase
         .from("users")
         .select("id, username, password_hash, created_at")
-        .ilike("username", username)
+        .ilike("username", normalized)
         .limit(1)
         .maybeSingle();
 

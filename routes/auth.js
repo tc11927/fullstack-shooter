@@ -77,7 +77,10 @@ router.get("/login", requireGuest, (req, res) => {
 // POST /login - Authenticate user
 router.post("/login", requireGuest, async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const rawUsername = req.body?.username;
+        const username =
+            typeof rawUsername === "string" ? rawUsername.trim() : "";
+        const password = req.body?.password;
 
         if (!username || !password) {
             return res.render("login", {
@@ -87,6 +90,7 @@ router.post("/login", requireGuest, async (req, res) => {
 
         const user = await getUserByUsername(username);
         if (!user) {
+            console.warn("Login failed: user not found", { username });
             return res.render("login", {
                 error: "Invalid username or password",
             });
@@ -94,6 +98,10 @@ router.post("/login", requireGuest, async (req, res) => {
 
         const validPassword = await bcrypt.compare(password, user.passwordHash);
         if (!validPassword) {
+            console.warn("Login failed: bad password", {
+                username,
+                userId: user.id,
+            });
             return res.render("login", {
                 error: "Invalid username or password",
             });
