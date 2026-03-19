@@ -2,13 +2,23 @@ const express = require("express");
 const session = require("express-session");
 const path = require("path");
 
+// Load local env early (before any config reads env vars)
+if (process.env.NODE_ENV !== "production") {
+    require("dotenv").config();
+}
 
 const authRoutes = require("./routes/auth");
 const gameRoutes = require("./routes/game");
 const scoresRoutes = require("./routes/scores");
+const { pool } = require("./db");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Needed on Vercel (secure cookies behind a proxy)
+if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+}
 
 // View engine setup
 app.set("view engine", "ejs");
@@ -19,24 +29,40 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
+const isProd = process.env.NODE_ENV === "production";
+
 // Session configuration
 app.use(
     session({
+        store: (() => {
+            // Vercel/serverless can't use MemoryStore for auth; persist sessions in Postgres.
+            if (!process.env.DATABASE_URL) {
+                // In local dev you might not need a DB-backed session store.
+                if (!isProd) return undefined;
+                throw new Error(
+                    "DATABASE_URL is required in production for session storage."
+                );
+            }
+            const PgSession = require("connect-pg-simple")(session);
+            return new PgSession({
+                pool,
+                tableName: "session",
+                createTableIfMissing: true,
+            });
+        })(),
         secret:
             process.env.SESSION_SECRET ||
             "robotron-secret-key-change-in-production",
         resave: false,
         saveUninitialized: false,
+        proxy: isProd,
         cookie: {
-            secure: process.env.NODE_ENV === "production",
+            secure: isProd,
+            sameSite: "lax",
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
         },
     })
 );
-// testing local env variables
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config()
-  }
 
 // Make user available in all views
 app.use((req, res, next) => {
