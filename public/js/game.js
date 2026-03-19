@@ -175,12 +175,8 @@ class Player {
         if (keys["ArrowRight"] || keys["KeyD"]) {
             this.x += this.speed;
         }
-        if (keys["ArrowUp"] || keys["KeyW"]) {
-            this.y -= this.speed;
-        }
-        if (keys["ArrowDown"] || keys["KeyS"]) {
-            this.y += this.speed;
-        }
+      
+        
 
         // Bounds
         this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
