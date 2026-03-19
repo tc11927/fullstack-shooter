@@ -12,3 +12,4 @@ yarn-error.log*
 
 .env
 .history
+node_modules
