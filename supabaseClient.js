@@ -1,16 +1,42 @@
 const { createClient } = require("@supabase/supabase-js");
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+function resolveSupabaseEnv() {
+    // Prefer server-only env var names; fall back to existing names used in this repo.
+    const url =
+        process.env.SUPABASE_URL ||
+        process.env.NEXT_PUBLIC_SUPABASE_URL ||
+        "";
+    const serviceKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ||
+        "";
 
-if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error("Supabase env vars missing (URL or SERVICE ROLE KEY)");
+    return { url, serviceKey };
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { persistSession: false },
-});
+let _client = null;
 
-module.exports = { supabase };
+function getSupabase() {
+    if (_client) return _client;
+
+    const { url, serviceKey } = resolveSupabaseEnv();
+    if (!url || !serviceKey) {
+        const missing = [
+            !url ? "SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL)" : null,
+            !serviceKey
+                ? "SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY)"
+                : null,
+        ].filter(Boolean);
+
+        // Don't crash the whole serverless function on import; throw when used so
+        // the error surfaces in runtime logs and the Express error handler.
+        throw new Error(`Supabase env vars missing: ${missing.join(", ")}`);
+    }
+
+    _client = createClient(url, serviceKey, {
+        auth: { persistSession: false },
+    });
+    return _client;
+}
+
+module.exports = { getSupabase };

@@ -1,4 +1,4 @@
-const { supabase } = require("../supabaseClient");
+const { getSupabase } = require("../supabaseClient");
 
 function mapUserRow(r) {
     return {
@@ -24,6 +24,7 @@ function mapScoreRow(r) {
 // User operations (Supabase)
 // -----------------------------
 async function getUserById(id) {
+    const supabase = getSupabase();
     const { data, error } = await supabase
         .from("users")
         .select("id, username, password_hash, created_at")
@@ -36,6 +37,7 @@ async function getUserById(id) {
 }
 
 async function getUserByUsername(username) {
+    const supabase = getSupabase();
     const { data, error } = await supabase
         .from("users")
         .select("id, username, password_hash, created_at")
@@ -48,6 +50,7 @@ async function getUserByUsername(username) {
 }
 
 async function createUser(user) {
+    const supabase = getSupabase();
     const { data, error } = await supabase
         .from("users")
         .insert({
@@ -67,6 +70,7 @@ async function createUser(user) {
 // Score operations (Supabase)
 // -----------------------------
 async function addScore(score) {
+    const supabase = getSupabase();
     const { data, error } = await supabase
         .from("scores")
         .insert({
@@ -85,6 +89,7 @@ async function addScore(score) {
 }
 
 async function getTopScores(limit = 10) {
+    const supabase = getSupabase();
     const lim = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 10;
 
     const { data, error } = await supabase
@@ -99,6 +104,7 @@ async function getTopScores(limit = 10) {
 }
 
 async function getUserScores(userId) {
+    const supabase = getSupabase();
     const { data, error } = await supabase
         .from("scores")
         .select("id, user_id, username, score, wave, created_at")
@@ -111,6 +117,7 @@ async function getUserScores(userId) {
 }
 
 async function getUserHighScore(userId) {
+    const supabase = getSupabase();
     const { data, error } = await supabase
         .from("scores")
         .select("score")
