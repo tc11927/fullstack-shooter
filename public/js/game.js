@@ -117,6 +117,81 @@ let enemiesInWave = 0;
 let waveComplete = false;
 
 // -----------------------------
+// Audio manager
+// -----------------------------
+const SOUND_PATHS = {
+    gameLoopMusic: "/sound/game-loop-music.mp3",
+    backgroundMusic: "/sound/background music.mp3",
+    gameClick: "/sound/game-click.wav",
+    gameOver: "/sound/game-over.mp3",
+    gameStart: "/sound/game-start.mp3",
+    getItem: "/sound/get item.mp3",
+    shooting: "/sound/shooting.mp3",
+};
+const LOOP_MUSIC_TIME_KEY = "robotron.loopMusic.time";
+
+const audio = {
+    gameLoopMusic: new Audio(SOUND_PATHS.gameLoopMusic),
+    backgroundMusic: new Audio(SOUND_PATHS.backgroundMusic),
+    gameClick: new Audio(SOUND_PATHS.gameClick),
+    gameOver: new Audio(SOUND_PATHS.gameOver),
+    gameStart: new Audio(SOUND_PATHS.gameStart),
+    getItem: new Audio(SOUND_PATHS.getItem),
+    shooting: new Audio(SOUND_PATHS.shooting),
+};
+
+audio.gameLoopMusic.loop = true;
+audio.gameLoopMusic.volume = 0.3;
+const savedLoopTime = Number.parseFloat(
+    sessionStorage.getItem(LOOP_MUSIC_TIME_KEY) || "0"
+);
+if (Number.isFinite(savedLoopTime) && savedLoopTime > 0) {
+    audio.gameLoopMusic.currentTime = savedLoopTime;
+}
+audio.backgroundMusic.loop = true;
+audio.backgroundMusic.volume = 0.35;
+audio.gameClick.volume = 0.5;
+audio.gameOver.volume = 0.8;
+audio.gameStart.volume = 0.75;
+audio.getItem.volume = 0.8;
+audio.shooting.volume = 0.4;
+
+let audioEnabled = false;
+
+function enableAudio() {
+    if (audioEnabled) return;
+    audioEnabled = true;
+    if (gameState === "start") {
+        playSound("gameLoopMusic", { restart: false });
+    }
+}
+
+function playSound(name, { restart = true } = {}) {
+    if (!audioEnabled || !audio[name]) return;
+    const sound = audio[name];
+    if (restart) {
+        sound.currentTime = 0;
+    }
+    sound.play().catch(() => {
+        // Ignore blocked/failed playback silently.
+    });
+}
+
+function stopSound(name) {
+    if (!audio[name]) return;
+    audio[name].pause();
+    audio[name].currentTime = 0;
+}
+
+function saveLoopMusicTime() {
+    sessionStorage.setItem(
+        LOOP_MUSIC_TIME_KEY,
+        String(audio.gameLoopMusic.currentTime || 0)
+    );
+}
+audio.gameLoopMusic.addEventListener("timeupdate", saveLoopMusicTime);
+
+// -----------------------------
 // Canvas sizing + starfield background
 // -----------------------------
 function resizeCanvas() {
@@ -241,6 +316,7 @@ class Player {
         playerBullets.push(
             new Bullet(bulletX, bulletY, -12, COLORS.cyan, true)
         );
+        playSound("shooting");
 
         // Muzzle flash particles are purely visual feedback.
         for (let i = 0; i < 5; i++) {
@@ -690,6 +766,7 @@ class PowerUp {
     }
 
     apply(player) {
+        playSound("getItem");
         switch (this.type) {
             case "shield":
                 player.shieldActive = true;
@@ -971,6 +1048,9 @@ function gameLoop(timestamp) {
 
 // Start game
 function startGame() {
+    enableAudio();
+    saveLoopMusicTime();
+    stopSound("gameLoopMusic");
     gameState = "playing";
     score = 0;
     wave = 1;
@@ -991,6 +1071,9 @@ function startGame() {
     document.getElementById("startScreen").classList.add("hidden");
     document.getElementById("gameOverScreen").classList.add("hidden");
     document.getElementById("pauseScreen").classList.add("hidden");
+
+    playSound("gameStart");
+    playSound("backgroundMusic", { restart: false });
 
     spawnWave();
 }
@@ -1014,6 +1097,8 @@ function resumeGame() {
 // Game over
 function gameOver() {
     gameState = "gameover";
+    stopSound("backgroundMusic");
+    playSound("gameOver");
 
     document.getElementById("finalScore").textContent = score.toLocaleString();
     document.getElementById("finalWave").textContent = wave;
@@ -1103,6 +1188,10 @@ function showPowerUpNotify(text) {
 // Event listeners
 window.addEventListener("resize", resizeCanvas);
 
+// Audio can only reliably start after user interaction in modern browsers.
+document.addEventListener("pointerdown", enableAudio, { once: true });
+document.addEventListener("keydown", enableAudio, { once: true });
+
 document.addEventListener("keydown", (e) => {
     keys[e.code] = true;
 
@@ -1116,6 +1205,9 @@ document.addEventListener("keydown", (e) => {
         e.preventDefault();
     }
 });
+
+window.addEventListener("pagehide", saveLoopMusicTime);
+window.addEventListener("beforeunload", saveLoopMusicTime);
 
 document.addEventListener("keyup", (e) => {
     keys[e.code] = false;
@@ -1137,6 +1229,13 @@ canvas.addEventListener("mouseleave", () => {
 document.getElementById("startBtn").addEventListener("click", startGame);
 document.getElementById("resumeBtn").addEventListener("click", resumeGame);
 document.getElementById("playAgainBtn").addEventListener("click", startGame);
+
+document.querySelectorAll("button, .btn, a").forEach((element) => {
+    element.addEventListener("click", () => {
+        enableAudio();
+        playSound("gameClick");
+    });
+});
 
 // Initialize
 resizeCanvas();

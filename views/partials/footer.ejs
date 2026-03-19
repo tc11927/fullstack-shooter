@@ -2,5 +2,83 @@
   <footer class="footer">
     <p>&copy; 2024 Robotron. Defend the galaxy.</p>
   </footer>
+  <script>
+    (() => {
+      if (window.location.pathname === "/game") return;
+
+      const MUSIC_SRC = "/sound/game-loop-music.mp3";
+      const KEY_ENABLED = "robotron.loopMusic.enabled";
+      const KEY_TIME = "robotron.loopMusic.time";
+      const activationEvents = ["pointerdown", "keydown", "wheel", "touchstart", "mousemove"];
+
+      if (sessionStorage.getItem(KEY_ENABLED) === null) {
+        sessionStorage.setItem(KEY_ENABLED, "1");
+      }
+      if (sessionStorage.getItem(KEY_ENABLED) !== "1") return;
+
+      const pageMusic = new Audio(MUSIC_SRC);
+      window.__siteLoopMusic = pageMusic;
+      pageMusic.loop = true;
+      pageMusic.volume = 0.3;
+
+      const savedTime = Number.parseFloat(sessionStorage.getItem(KEY_TIME) || "0");
+      if (Number.isFinite(savedTime) && savedTime > 0) {
+        pageMusic.currentTime = savedTime;
+      }
+
+      let musicEnabled = false;
+
+      const persistCurrentTime = () => {
+        if (!Number.isNaN(pageMusic.currentTime)) {
+          sessionStorage.setItem(KEY_TIME, String(pageMusic.currentTime));
+        }
+      };
+
+      const removeActivationListeners = () => {
+        activationEvents.forEach((eventName) => {
+          document.removeEventListener(eventName, tryPlayMusic);
+        });
+      };
+
+      const tryPlayMusic = () => {
+        if (musicEnabled) return;
+        const playPromise = pageMusic.play();
+
+        if (!playPromise || typeof playPromise.then !== "function") {
+          musicEnabled = true;
+          removeActivationListeners();
+          return;
+        }
+
+        playPromise
+          .then(() => {
+            musicEnabled = true;
+            removeActivationListeners();
+          })
+          .catch(() => {
+            // Browser blocked autoplay; keep listeners and retry on interaction.
+          });
+      };
+
+      pageMusic.addEventListener("timeupdate", persistCurrentTime);
+
+      tryPlayMusic();
+      activationEvents.forEach((eventName) => {
+        document.addEventListener(eventName, tryPlayMusic);
+      });
+
+      const saveBeforeLeave = () => {
+        persistCurrentTime();
+      };
+
+      window.addEventListener("pagehide", saveBeforeLeave);
+      window.addEventListener("beforeunload", saveBeforeLeave);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") {
+          saveBeforeLeave();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
