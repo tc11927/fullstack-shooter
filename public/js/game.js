@@ -599,21 +599,204 @@ class Enemy {
 }
 
 // -----------------------------
+// Boss entity (every 5 waves)
+// -----------------------------
+const BOSS_SALVO_SHOTS = 3;
+const BOSS_BURST_GAP_MS = 200;
+
+class Boss {
+    constructor(x, y) {
+        this.isBoss = true;
+        this.width = 120;
+        this.height = 80;
+        this.x = x;
+        this.y = y;
+        this.baseSpeed = 1;
+        this.direction = 1;
+        this.health = 12 + wave * 2;
+        this.maxHealth = this.health;
+        this.points = 3000; // Applied with wave multiplier on kill
+        this.color = COLORS.red;
+
+        this.shootTimer = 0;
+        this.patternIndex = 0;
+        this.shootBurstLeft = 0;
+        this.burstGapTimer = 0;
+    }
+
+    update(deltaTime) {
+        const m = getWaveSpeedMultiplier();
+        this.x += this.baseSpeed * m * this.direction;
+        if (this.x <= 0 || this.x >= canvas.width - this.width) {
+            this.direction *= -1;
+            this.y += 15 * m;
+        }
+        this.y = Math.min(this.y, canvas.height * 0.35);
+
+        if (this.shootBurstLeft > 0) {
+            this.burstGapTimer -= deltaTime;
+            if (this.burstGapTimer <= 0) {
+                this.shoot();
+                this.shootBurstLeft--;
+                if (this.shootBurstLeft > 0) {
+                    this.burstGapTimer = BOSS_BURST_GAP_MS;
+                } else {
+                    this.shootTimer =
+                        1200 * getWaveSpeedMultiplier();
+                }
+            }
+        } else {
+            this.shootTimer -= deltaTime;
+            if (this.shootTimer <= 0) {
+                this.patternIndex =
+                    (this.patternIndex + 1) % 4;
+                this.shoot();
+                this.shootBurstLeft = BOSS_SALVO_SHOTS - 1;
+                this.burstGapTimer = BOSS_BURST_GAP_MS;
+            }
+        }
+    }
+
+    shoot() {
+        const baseSpeed = 6 * getWaveSpeedMultiplier();
+        const cx = this.x + this.width / 2 - 3;
+        const cy = this.y + this.height;
+        const patterns = [
+            () => this.spreadShot(cx, cy, baseSpeed),
+            () => this.randomSpread(cx, cy, baseSpeed),
+            () => this.burstDown(cx, cy, baseSpeed),
+            () => this.wavePattern(cx, cy, baseSpeed),
+        ];
+        patterns[this.patternIndex]();
+    }
+
+    spreadShot(cx, cy, baseSpeed) {
+        const angles = [-45, 0, 45];
+        // Two rows × three directions = 6 per salvo (18 total across boss triple-fire).
+        const rowDy = [0, 16];
+        rowDy.forEach((dy) => {
+            const spawnY = cy + dy;
+            angles.forEach((deg) => {
+                const rad = (deg * Math.PI) / 180;
+                const vy = baseSpeed * Math.cos(rad);
+                const vx = baseSpeed * Math.sin(rad);
+                enemyBullets.push(
+                    new Bullet(cx, spawnY, vy, this.color, false, vx)
+                );
+            });
+        });
+    }
+
+    randomSpread(cx, cy, baseSpeed) {
+        for (let i = 0; i < 4; i++) {
+            const angle = (Math.random() - 0.5) * Math.PI * 0.8;
+            const vy = baseSpeed * Math.cos(angle);
+            const vx = baseSpeed * Math.sin(angle);
+            enemyBullets.push(
+                new Bullet(cx, cy, vy, this.color, false, vx)
+            );
+        }
+    }
+
+    burstDown(cx, cy, baseSpeed) {
+        const offsets = [-30, 0, 30];
+        offsets.forEach((dx) => {
+            const vx = (dx / 30) * baseSpeed * 0.6;
+            const vy = baseSpeed * Math.sqrt(1 - 0.36);
+            enemyBullets.push(
+                new Bullet(cx + dx, cy, vy, this.color, false, vx)
+            );
+        });
+    }
+
+    wavePattern(cx, cy, baseSpeed) {
+        for (let i = 0; i < 3; i++) {
+            const t = (i / 3) * Math.PI;
+            const vx = Math.sin(t * 2) * baseSpeed * 0.8;
+            const vy = baseSpeed * 0.9;
+            enemyBullets.push(
+                new Bullet(cx, cy, vy, this.color, false, vx)
+            );
+        }
+    }
+
+    draw() {
+        ctx.save();
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 25;
+
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width / 2, this.y);
+        ctx.lineTo(this.x, this.y + this.height);
+        ctx.lineTo(this.x + this.width, this.y + this.height);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = COLORS.yellow;
+        ctx.shadowColor = COLORS.yellow;
+        ctx.beginPath();
+        ctx.arc(this.x + this.width * 0.3, this.y + this.height * 0.4, 8, 0, Math.PI * 2);
+        ctx.arc(this.x + this.width * 0.7, this.y + this.height * 0.4, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        const barW = this.width;
+        const barH = 4;
+        const barY = this.y - 12;
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(this.x, barY, barW, barH);
+        ctx.fillStyle = this.health / this.maxHealth > 0.5 ? COLORS.green : COLORS.red;
+        ctx.fillRect(this.x, barY, barW * (this.health / this.maxHealth), barH);
+
+        ctx.restore();
+    }
+
+    hit() {
+        this.health--;
+        if (this.health <= 0) {
+            for (let i = 0; i < 50; i++) {
+                particles.push(
+                    new Particle(
+                        this.x + this.width / 2,
+                        this.y + this.height / 2,
+                        this.color,
+                        "large"
+                    )
+                );
+            }
+            return true;
+        }
+        for (let i = 0; i < 10; i++) {
+            particles.push(
+                new Particle(
+                    this.x + this.width / 2,
+                    this.y + this.height / 2,
+                    COLORS.white,
+                    "small"
+                )
+            );
+        }
+        return false;
+    }
+}
+
+// -----------------------------
 // Bullet entity
 // -----------------------------
 class Bullet {
-    constructor(x, y, speed, color, isPlayer) {
+    constructor(x, y, speed, color, isPlayer, vx = 0) {
         this.x = x;
         this.y = y;
         this.width = 6;
         this.height = 15;
-        this.speed = speed;
+        this.speed = speed; // vy for vertical
+        this.vx = vx;
         this.color = color;
         this.isPlayer = isPlayer;
     }
 
     update() {
-        // Bullets only move vertically; sign of speed decides direction.
+        this.x += this.vx;
         this.y += this.speed;
     }
 
@@ -672,8 +855,13 @@ class Bullet {
     }
 
     isOffScreen() {
-        // Used to cleanup bullets when they leave the play area.
-        return this.y < -20 || this.y > canvas.height + 20;
+        const margin = 50;
+        return (
+            this.y < -margin ||
+            this.y > canvas.height + margin ||
+            this.x < -margin ||
+            this.x > canvas.width + margin
+        );
     }
 }
 
@@ -876,27 +1064,48 @@ function checkCollision(rect1, rect2) {
 // -----------------------------
 // Spawning / waves
 // -----------------------------
+function isBossWave() {
+    return wave > 0 && wave % 5 === 0;
+}
+
 function spawnWave() {
-    // Spawns a wave by scheduling enemy creation over time (staggered by i*500).
-    const baseCount = 5 + wave * 2;
-    enemiesInWave = Math.min(baseCount, 20);
-    enemiesRemaining = enemiesInWave;
     waveComplete = false;
 
-    // Determine enemy types based on wave
-    for (let i = 0; i < enemiesInWave; i++) {
-        setTimeout(() => {
-            if (gameState !== "playing") return;
+    if (isBossWave()) {
+        const minionCount = 3 + Math.floor(wave / 2);
+        enemiesInWave = 1 + Math.min(minionCount, 8);
+        enemiesRemaining = enemiesInWave;
 
-            const x = Math.random() * (canvas.width - 50);
-            const y = -50 - Math.random() * 100;
+        const bossX = canvas.width / 2 - 60;
+        enemies.push(new Boss(bossX, 40));
 
-            let type = "basic";
-            if (wave >= 3 && Math.random() < 0.3) type = "fast";
-            if (wave >= 5 && Math.random() < 0.2) type = "tank";
+        for (let i = 0; i < enemiesInWave - 1; i++) {
+            setTimeout(() => {
+                if (gameState !== "playing") return;
+                const x = Math.random() * (canvas.width - 50);
+                const y = -50 - Math.random() * 100;
+                let type = "basic";
+                if (wave >= 3 && Math.random() < 0.4) type = "fast";
+                if (wave >= 5 && Math.random() < 0.25) type = "tank";
+                enemies.push(new Enemy(x, y, type));
+            }, 800 + i * 600);
+        }
+    } else {
+        const baseCount = 5 + wave * 2;
+        enemiesInWave = Math.min(baseCount, 20);
+        enemiesRemaining = enemiesInWave;
 
-            enemies.push(new Enemy(x, y, type));
-        }, i * 500);
+        for (let i = 0; i < enemiesInWave; i++) {
+            setTimeout(() => {
+                if (gameState !== "playing") return;
+                const x = Math.random() * (canvas.width - 50);
+                const y = -50 - Math.random() * 100;
+                let type = "basic";
+                if (wave >= 3 && Math.random() < 0.3) type = "fast";
+                if (wave >= 5 && Math.random() < 0.2) type = "tank";
+                enemies.push(new Enemy(x, y, type));
+            }, i * 500);
+        }
     }
 
     showWaveAnnounce(wave);
@@ -1193,12 +1402,17 @@ function updateLivesDisplay() {
 
 function showWaveAnnounce(waveNum) {
     const announce = document.getElementById("waveAnnounce");
-    document.getElementById("waveNumber").textContent = waveNum;
+    const waveEl = document.getElementById("waveNumber");
+    waveEl.textContent = waveNum;
+    const parent = waveEl.parentElement;
+    parent.textContent = "";
+    parent.appendChild(document.createTextNode(isBossWave() ? "BOSS WAVE " : "WAVE "));
+    parent.appendChild(waveEl);
     announce.classList.remove("hidden");
 
     setTimeout(() => {
         announce.classList.add("hidden");
-    }, 2000);
+    }, 2500);
 }
 
 function showPowerUpNotify(text) {
