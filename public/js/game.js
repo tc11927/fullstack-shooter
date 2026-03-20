@@ -116,6 +116,17 @@ let enemiesRemaining = 0;
 let enemiesInWave = 0;
 let waveComplete = false;
 
+// Per-wave speed scaling: wave 1 = 1×, each +1 wave adds this amount (capped).
+const WAVE_SPEED_SCALE_PER_WAVE = 0.06;
+const MAX_WAVE_SPEED_MULT = 2.5;
+
+function getWaveSpeedMultiplier() {
+    return Math.min(
+        1 + (wave - 1) * WAVE_SPEED_SCALE_PER_WAVE,
+        MAX_WAVE_SPEED_MULT
+    );
+}
+
 // -----------------------------
 // Audio manager
 // -----------------------------
@@ -243,6 +254,13 @@ class Player {
     }
 
     update(deltaTime) {
+        const waveMult = getWaveSpeedMultiplier();
+        if (this.speedBoostActive) {
+            this.speed = 10 * waveMult;
+        } else {
+            this.speed = this.baseSpeed * waveMult;
+        }
+
         // Movement
         if (keys["ArrowLeft"] || keys["KeyA"]) {
             this.x -= this.speed;
@@ -250,8 +268,6 @@ class Player {
         if (keys["ArrowRight"] || keys["KeyD"]) {
             this.x += this.speed;
         }
-      
-        
 
         // Bounds
         this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
@@ -289,7 +305,7 @@ class Player {
             this.speedBoostTimer -= deltaTime;
             if (this.speedBoostTimer <= 0) {
                 this.speedBoostActive = false;
-                this.speed = this.baseSpeed;
+                this.speed = this.baseSpeed * waveMult;
             }
         }
 
@@ -437,19 +453,19 @@ class Enemy {
         // Type controls speed/health/points and also changes hitbox size.
         switch (type) {
             case "fast":
-                this.speed = 3;
+                this.baseSpeed = 3;
                 this.health = 1;
                 this.points = 150;
                 this.color = COLORS.green;
                 break;
             case "tank":
-                this.speed = 1;
+                this.baseSpeed = 1;
                 this.health = 3;
                 this.points = 200;
                 this.color = COLORS.red;
                 break;
             default: // basic
-                this.speed = 2;
+                this.baseSpeed = 2;
                 this.health = 1;
                 this.points = 100;
                 this.color = COLORS.magenta;
@@ -462,14 +478,15 @@ class Enemy {
     }
 
     update(deltaTime) {
+        const m = getWaveSpeedMultiplier();
         // Horizontal movement + wall bounce. On bounce we also move down to
         // increase pressure over time.
-        this.x += this.speed * this.direction;
+        this.x += this.baseSpeed * m * this.direction;
 
         // Bounce off walls
         if (this.x <= 0 || this.x >= canvas.width - this.width) {
             this.direction *= -1;
-            this.y += 20;
+            this.y += 20 * m;
         }
 
         // Slight vertical drift adds unpredictable motion.
@@ -478,7 +495,7 @@ class Enemy {
             this.verticalMove = Math.random() * 0.5;
             this.moveTimer = 0;
         }
-        this.y += this.verticalMove;
+        this.y += this.verticalMove * m;
 
         // Shooting: cooldown timer; only shoots while in the upper half.
         this.shootTimer -= deltaTime;
@@ -492,7 +509,10 @@ class Enemy {
         // Spawn a downward bullet from enemy center.
         const bulletX = this.x + this.width / 2 - 3;
         const bulletY = this.y + this.height;
-        enemyBullets.push(new Bullet(bulletX, bulletY, 6, this.color, false));
+        const bulletSpeed = 6 * getWaveSpeedMultiplier();
+        enemyBullets.push(
+            new Bullet(bulletX, bulletY, bulletSpeed, this.color, false)
+        );
     }
 
     draw() {
@@ -782,7 +802,7 @@ class PowerUp {
             case "speed":
                 player.speedBoostActive = true;
                 player.speedBoostTimer = 5000;
-                player.speed = 10;
+                player.speed = 10 * getWaveSpeedMultiplier();
                 showPowerUpNotify("SPEED BOOST");
                 break;
             case "life":
