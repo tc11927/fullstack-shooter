@@ -957,7 +957,7 @@ function update(deltaTime) {
             if (checkCollision(bullet, enemy)) {
                 playerBullets.splice(bIndex, 1);
                 if (enemy.hit()) {
-                    score += enemy.points;
+                    score += enemy.points * wave;
                     enemies.splice(eIndex, 1);
                     enemiesRemaining--;
                     updateScoreDisplay();
@@ -1009,6 +1009,7 @@ function update(deltaTime) {
             if (gameState === "playing") {
                 wave++;
                 updateWaveDisplay();
+                updateMultiplierDisplay();
                 spawnWave();
             }
         }, 2000);
@@ -1086,6 +1087,7 @@ function startGame() {
 
     updateScoreDisplay();
     updateWaveDisplay();
+    updateMultiplierDisplay();
     updateLivesDisplay();
 
     document.getElementById("startScreen").classList.add("hidden");
@@ -1170,6 +1172,10 @@ function updateScoreDisplay() {
 
 function updateWaveDisplay() {
     document.getElementById("hudWave").textContent = wave;
+}
+
+function updateMultiplierDisplay() {
+    document.getElementById("hudMultiplier").textContent = "x" + wave;
 }
 
 function updateLivesDisplay() {
